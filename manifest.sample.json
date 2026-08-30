@@ -1,0 +1,129 @@
+{
+  "schemaVersion": 1,
+  "generated": "2026-08-30T00:00:00Z",
+  "packages": [
+    {
+      "uuid": "11111111-1111-4111-8111-111111111111",
+      "kind": "AndroidMobileServer",
+      "kindId": 200,
+      "name": "Febris Mobile Server",
+      "version": "0.2.0",
+      "versionCode": 200,
+      "channel": "stable",
+      "consumers": [
+        "human",
+        "node"
+      ],
+      "description": "Tablet-side server. Installed by hand from a download page, because a tablet with no Febris app on it cannot fetch its own first app.",
+      "packageName": "com.febris.mobileserver",
+      "minSdk": 29,
+      "targetSdk": 30,
+      "obsolete": false,
+      "artifact": {
+        "fileName": "febris-mobile-server-0.2.0.zip",
+        "url": "https://example.invalid/releases/download/v0.2.0/febris-mobile-server-0.2.0.zip",
+        "sizeBytes": 41234567,
+        "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+      },
+      "contains": [
+        {
+          "fileName": "febris-mobile-server-0.2.0.apk",
+          "sha256": "0000000000000000000000000000000000000000000000000000000000000001",
+          "signerSha256": "0000000000000000000000000000000000000000000000000000000000000002"
+        }
+      ],
+      "releaseNotes": "https://example.invalid/releases/tag/v0.2.0"
+    },
+    {
+      "uuid": "22222222-2222-4222-8222-222222222222",
+      "kind": "AndroidMobileCompanion",
+      "kindId": 300,
+      "name": "Febris Mobile Companion",
+      "version": "0.2.0",
+      "versionCode": 200,
+      "channel": "stable",
+      "consumers": [
+        "node"
+      ],
+      "description": "Headset-side agent. Never fetched by a human: the node serves it to the mobile Server, which installs it to the headset over ADB on USB OTG.",
+      "packageName": "com.febris.companion",
+      "minSdk": 25,
+      "targetSdk": 33,
+      "obsolete": false,
+      "artifact": {
+        "fileName": "febris-mobile-companion-0.2.0.zip",
+        "url": "https://example.invalid/releases/download/v0.2.0/febris-mobile-companion-0.2.0.zip",
+        "sizeBytes": 38111222,
+        "sha256": "0000000000000000000000000000000000000000000000000000000000000003"
+      },
+      "contains": [
+        {
+          "fileName": "febris-mobile-companion-0.2.0.apk",
+          "sha256": "0000000000000000000000000000000000000000000000000000000000000004",
+          "signerSha256": "0000000000000000000000000000000000000000000000000000000000000002"
+        }
+      ],
+      "releaseNotes": "https://example.invalid/releases/tag/v0.2.0"
+    },
+    {
+      "uuid": "8724e5c1-46af-40d2-9bda-e4035f7ab50b",
+      "kind": "CSharp",
+      "kindId": 400,
+      "name": "Febris Simulation SDK (C#)",
+      "version": "0.1.0",
+      "channel": "stable",
+      "consumers": [
+        "human"
+      ],
+      "description": "The managed simulation SDK, for developers building Febris-integrated simulations. REAL entry: this is the published nuget.org package (canonical channel: dotnet add package Febris.Simulation.XApiSdk); the feed row exists so a node catalog can point developers at it. The node never consumes the SDK itself.",
+      "obsolete": false,
+      "artifact": {
+        "fileName": "febris.simulation.xapisdk.0.1.0.nupkg",
+        "url": "https://api.nuget.org/v3-flatcontainer/febris.simulation.xapisdk/0.1.0/febris.simulation.xapisdk.0.1.0.nupkg",
+        "sizeBytes": 49188,
+        "sha256": "8d3666bc5748ab5472fcf1c57ac38fa61648b128ad30249a6f1aa0faebcac6cf"
+      },
+      "contains": [
+        {
+          "fileName": "lib/netstandard2.0/Febris.CsharpSimulationLibraryNetStandard.dll",
+          "sha256": "029e157f7cc97cdc3f7ff377a6992e9a7d0930b9de08689facf66da2fbe03c8e"
+        }
+      ],
+      "releaseNotes": "https://www.nuget.org/packages/Febris.Simulation.XApiSdk/0.1.0"
+    },
+    {
+      "uuid": "80bb1ed0-cf3f-4931-b289-ed6d7d7f3301",
+      "kind": "CPP",
+      "kindId": 500,
+      "name": "Febris Simulation SDK (C++)",
+      "version": "0.1.0",
+      "channel": "stable",
+      "consumers": [
+        "human"
+      ],
+      "description": "The native simulation SDK for Unreal and other native hosts: FebrisSimApi.h (flat C ABI) plus the prebuilt Windows x64 DLL and import library. REAL entry: this is the conformance-gated bundle attached to the Febris_SDK GitHub Release (also served as the febris-simulation-sdk vcpkg port). Byte-parity locked to the C# SDK at the same version.",
+      "obsolete": false,
+      "artifact": {
+        "fileName": "febris-simulation-sdk-cpp-v0.1.0-win-x64.zip",
+        "url": "https://github.com/TRget88/Febris_SDK/releases/download/v0.1.0/febris-simulation-sdk-cpp-v0.1.0-win-x64.zip",
+        "sizeBytes": 208268,
+        "sha256": "2570817c6462ae616b16f1ad9b7b77c003fbfc0765b10da7460a9cce2237cf59"
+      },
+      "contains": [
+        {
+          "fileName": "Febris.CppSimulationLibrary.dll",
+          "sha256": "dd6143d75a2016817ac738fd8a60795b48402746b7e469eabde21b0a3cdd3d6b"
+        },
+        {
+          "fileName": "Febris.CppSimulationLibrary.lib",
+          "sha256": "4970fc1347ab523b385b8e124f989a24b6009bb6e91ef8ff239049525abca55c"
+        },
+        {
+          "fileName": "FebrisSimApi.h",
+          "sha256": "27fe19b29e8c2719d53b42a8ac20ea222c0da693a2930418e4d9cef47b6f91f5"
+        }
+      ],
+      "releaseNotes": "https://github.com/TRget88/Febris_SDK/releases/tag/v0.1.0"
+    }
+  ]
+}

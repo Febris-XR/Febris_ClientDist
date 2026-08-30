@@ -1,0 +1,184 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://febris.invalid/schema/client-distribution/manifest-1.json",
+  "title": "Febris client software distribution manifest",
+  "description": "Index of published client-software artifacts (mobile Server APK, mobile Companion APK, PC launcher installer, integration SDKs). Consumed by a node's package-feed sync and readable by a human. Designed to map one-to-one onto the node's LocalSoftwarePackage catalog row so the sync is a field copy rather than a translation. See docs/OSS_CLIENT_DISTRIBUTION.md.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "generated", "packages"],
+  "properties": {
+    "schemaVersion": {
+      "description": "Bumped only on a BREAKING change to this document's shape. Consumers must refuse a schemaVersion they do not know rather than guess.",
+      "type": "integer",
+      "const": 1
+    },
+    "generated": {
+      "description": "UTC timestamp this manifest was produced. Informational only: never use it to decide which package is newest, because a regenerated manifest does not mean a new release.",
+      "type": "string",
+      "format": "date-time"
+    },
+    "packages": {
+      "description": "Every published artifact still worth advertising, including obsolete ones. Order carries no meaning; a consumer that needs newest-first must sort by versionCode itself.",
+      "type": "array",
+      "items": { "$ref": "#/$defs/package" }
+    }
+  },
+  "$defs": {
+    "sha256": {
+      "description": "Lowercase hex SHA-256, matching the casing the node's PackageArtifact.Sha256 records so the two are directly comparable.",
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "package": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "uuid",
+        "kind",
+        "kindId",
+        "name",
+        "version",
+        "channel",
+        "consumers",
+        "obsolete",
+        "artifact"
+      ],
+      "properties": {
+        "uuid": {
+          "description": "STABLE identity of this release, assigned by the publisher and never reused. This is what makes a re-sync idempotent: the node upserts its catalog row keyed on this UUID, so ingesting the same release twice updates one row instead of creating two. It is also the id a client later downloads by.",
+          "type": "string",
+          "format": "uuid"
+        },
+        "kind": {
+          "description": "Human-readable artifact kind. Mirrors the LocalSoftwarePackageType member name.",
+          "type": "string",
+          "enum": [
+            "PC",
+            "AndroidMobileServer",
+            "AndroidMobileCompanion",
+            "CSharp",
+            "CPP"
+          ]
+        },
+        "kindId": {
+          "description": "The LocalSoftwarePackageType integer value, carried alongside the name so no consumer has to maintain a name-to-enum mapping that can silently drift. A consumer MUST treat a kind/kindId disagreement as a fatal manifest error.",
+          "type": "integer",
+          "enum": [100, 200, 300, 400, 500]
+        },
+        "name": {
+          "description": "Display name for catalogs and download pages.",
+          "type": "string",
+          "minLength": 1
+        },
+        "version": {
+          "description": "Human-facing version, SemVer. Free-form as far as Android is concerned; versionCode is what the platform actually enforces.",
+          "type": "string",
+          "minLength": 1
+        },
+        "versionCode": {
+          "description": "Android's monotonically increasing upgrade counter, derived as MAJOR*10000 + MINOR*100 + PATCH. REQUIRED for the two Android kinds and meaningless for the others. Must match the value compiled into the APK: a mismatch is undetectable by the node and produces an install that silently disagrees with the catalog.",
+          "type": "integer",
+          "minimum": 1
+        },
+        "channel": {
+          "description": "Release channel. A node syncs one channel and ignores the rest.",
+          "type": "string",
+          "enum": ["stable", "beta"]
+        },
+        "consumers": {
+          "description": "WHO is expected to fetch this, which is not the same for every kind and is enforced elsewhere in the product. AndroidMobileServer is [\"human\",\"node\"] because it is the bootstrap: a tablet with no Febris app cannot fetch its own first app, so a person must be able to click it. AndroidMobileCompanion is [\"node\"] only, matching the developer portal deliberately refusing to serve it to a browser and instead letting the mobile Server pull it and install it over ADB. A consumer that ignores this field still works, so it is documentation with teeth rather than a gate.",
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": { "type": "string", "enum": ["human", "node"] }
+        },
+        "description": { "type": "string" },
+        "language": {
+          "description": "LanguageMapTypeEnum member name. Optional; a consumer defaults it when absent.",
+          "type": "string"
+        },
+        "packageName": {
+          "description": "Android application id. PERMANENT once published, on the same footing as the signing key: it cannot change without every user uninstalling and losing local data. Android kinds only.",
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_]*(\\.[a-z][a-z0-9_]*)+$"
+        },
+        "minSdk": { "type": "integer", "minimum": 1 },
+        "targetSdk": { "type": "integer", "minimum": 1 },
+        "obsolete": {
+          "description": "Mirrors the node catalog's own Obsolete flag, so \"latest non-obsolete\" resolves identically on both sides. Superseded releases stay listed rather than being deleted, so an operator can still fetch an older build deliberately.",
+          "type": "boolean"
+        },
+        "artifact": {
+          "description": "The downloadable unit. A .zip wrapping the payload for every kind except CSharp, because the deployed mobile client already downloads and writes a .zip and preserving that envelope means no mobile-side change. The CSharp kind (400) alone may be a .nupkg: its canonical artifact IS the published NuGet package (zip-format internally), and wrapping it again would create a second artifact nobody publishes.",
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["fileName", "url", "sizeBytes", "sha256"],
+          "properties": {
+            "fileName": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9._-]+\\.(zip|nupkg)$"
+            },
+            "url": {
+              "description": "Direct download URL. Anonymous and unauthenticated by design.",
+              "type": "string",
+              "format": "uri"
+            },
+            "sizeBytes": { "type": "integer", "minimum": 1 },
+            "sha256": {
+              "description": "Checksum of the ZIP as served. A consumer MUST verify this BEFORE committing the artifact to its catalog, or a truncated download becomes a published package.",
+              "$ref": "#/$defs/sha256"
+            }
+          }
+        },
+        "contains": {
+          "description": "What is inside the zip. Lets a consumer verify the payload rather than only its wrapper.",
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["fileName", "sha256"],
+            "properties": {
+              "fileName": { "type": "string", "minLength": 1 },
+              "sha256": { "$ref": "#/$defs/sha256" },
+              "signerSha256": {
+                "description": "SHA-256 of the APK SIGNING CERTIFICATE, not of the file. This is the only field here that proves ORIGIN rather than integrity: a public URL plus a public checksum authenticates that bytes arrived intact and says nothing about who produced them. A node that pins this value can refuse an artifact signed by anyone else. Obtain it with `apksigner verify --print-certs`.",
+                "$ref": "#/$defs/sha256"
+              }
+            }
+          }
+        },
+        "releaseNotes": {
+          "description": "URL of the human-readable notes for this release.",
+          "type": "string",
+          "format": "uri"
+        }
+      },
+      "allOf": [
+        {
+          "description": "The Android kinds must carry the platform fields that only mean something for them.",
+          "if": {
+            "properties": { "kindId": { "enum": [200, 300] } },
+            "required": ["kindId"]
+          },
+          "then": { "required": ["versionCode", "packageName", "minSdk", "targetSdk"] }
+        },
+        {
+          "description": "Only the CSharp kind (400) may ship a .nupkg artifact -- that IS its canonical published unit; every other kind stays .zip.",
+          "if": {
+            "properties": { "kindId": { "not": { "const": 400 } } },
+            "required": ["kindId"]
+          },
+          "then": {
+            "properties": {
+              "artifact": {
+                "properties": {
+                  "fileName": { "pattern": "^[A-Za-z0-9._-]+\\.zip$" }
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+}

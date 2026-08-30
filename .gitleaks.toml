@@ -1,0 +1,59 @@
+# Per-repo gitleaks config, shipped IN each public repo (NR-5).
+# SECURITY.md points here, so the scan diligence is visible rather than asserted.
+#
+# The gate is "zero UN-ALLOWLISTED findings", not "zero findings". DRIFT phase 1
+# classified 74 false positives across 11,992 blobs and found ZERO real credentials
+# ever committed; the allowlists below are those 74 by class, so a real finding is
+# never buried in noise.
+
+[extend]
+useDefault = true
+
+[[allowlists]]
+description = "Vendored third-party assets. Not first-party code; the D1 prune removes most of them structurally, but what remains still carries sample keys and contributor emails. Scoped to the vendored SUBTREES, not to wwwroot/ as a whole: only gentelella-master/, lib/ and the marketing site's startbootstrap theme are vendored. JSScriptLib/, css/, js/, images/, media/ and EmailTemplates/ are first-party portal code -- JSScriptLib/ alone is 101 of the node's 245 wwwroot files -- and the old '.*/wwwroot/.*' entry meant gitleaks never opened any of them."
+paths = [
+  '''.*/wwwroot/gentelella-master/.*''',
+  '''.*/wwwroot/lib/.*''',
+  '''.*/wwwroot/startbootstrap-grayscale-gh-pages/.*''',
+  '''.*/node_modules/.*''',
+  '''.*\.min\.(js|css)$''',
+]
+
+[[allowlists]]
+description = "LinkedIndustry is a Febris domain term (CurriculumLinkedIndustry, MarketplaceListingLinkedIndustry), not a LinkedIn API secret; the linkedin-client-secret rule matches the substring. regexTarget=line is REQUIRED -- allowlist regexes are tested against the EXTRACTED SECRET by default, not the surrounding text, so this rule silently suppressed nothing until it was actually run."
+regexTarget = "line"
+regexes = ['''LinkedIndustry''']
+
+# targetRules on the two test-tree allowlists below is load-bearing, not decoration.
+# A global allowlist carrying `paths` and NO rule restriction makes gitleaks skip the
+# matching files outright -- it reports "scanned ~0 bytes" -- so these two blocks between
+# them suppressed EVERY rule across the whole test tree, 21% of the repo and 75 .cs files.
+# A real AWS access key and a real GitHub PAT planted under tests/ were both invisible.
+# The rule ids are derived from what actually fires, not guessed: with the restriction
+# removed, a scan of tests/ (working tree and all 79 commits of history) reports exactly
+# generic-api-key and private-key. Widening either list is therefore a deliberate,
+# reviewable act rather than a silent side effect of a path glob.
+
+[[allowlists]]
+description = "Deliberate dummy fixtures. Test doubles and golden files use obviously fake material; several are asserted ON, so replacing them breaks the test that proves the validator rejects bad input. The noise is the generic catch-all rule matching fixture GUIDs (e.g. LicenseKey = \"8b4bffe1-...\"), so that is the only rule this suppresses."
+targetRules = ["generic-api-key"]
+paths = [
+  '''tests/.*''',
+  '''.*/Fixtures/.*''',
+  '''distribution/manifest\.sample\.json$''',
+]
+
+[[allowlists]]
+description = "Runtime-generated test keys. These are created during the test run, never committed material."
+targetRules = ["private-key"]
+regexes = [
+  '''BEGIN (RSA )?PRIVATE KEY''',
+]
+paths = ['''tests/.*''']
+
+[[allowlists]]
+description = "Reserved placeholder domains and addresses introduced by the R1 severance scrub. example.com/.org/.invalid cannot resolve to anything an operator does not control."
+regexes = [
+  '''(?i)@example\.(com|org|invalid)''',
+  '''(?i)https?://(www\.)?example\.(com|org|invalid)''',
+]

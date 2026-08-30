@@ -1,0 +1,99 @@
+name: validate
+
+# The pull-request gate for manifest.json.
+#
+# Two things are checked and they are deliberately different in strength.
+#
+#   1. The SCHEMA and the cross-field rules, always, with no network involved. This is the part that
+#      catches the mistakes that actually happen: a kind that disagrees with its kindId, a reused
+#      uuid, two builds claiming one versionCode.
+#
+#   2. REACHABILITY of each artifact URL, when the manifest describes real releases. A full checksum
+#      verification is NOT done here. It would mean downloading tens of megabytes of APK on every
+#      pull request to re-prove something release.yml proves properly against the artifacts actually
+#      attached to the Release. A HEAD request answers the question a reviewer has at this stage,
+#      which is whether the URL points at anything.
+#
+# The example manifest is expected to fail step 2 and does not. Every URL in it uses the .invalid
+# TLD, which RFC 2606 reserves so it can never resolve. That is a property of an example rather than
+# a broken link, so those hosts are recognised and reported instead of failing the run.
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: validate-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    name: schema + reachability
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      # No setup-python step on purpose. The validator is standard library only, precisely so that
+      # it runs anywhere without a toolchain step that could itself fail or drift.
+      - name: Show the interpreter
+        run: python3 --version
+
+      - name: Validate the manifest
+        run: python3 tools/validate_manifest.py manifest.json
+
+      - name: Check that every artifact URL resolves
+        shell: bash
+        run: |
+          set -uo pipefail
+          python3 - <<'PY' > urls.txt
+          import json
+          m = json.load(open("manifest.json", encoding="utf-8"))
+          for p in m.get("packages", []):
+              a = p.get("artifact") or {}
+              url = a.get("url")
+              if url:
+                  print("%s\t%s" % (p.get("uuid", "?"), url))
+          PY
+
+          if [ ! -s urls.txt ]; then
+            echo "no artifact URLs in the manifest, nothing to reach"
+            exit 0
+          fi
+
+          example=0
+          failed=0
+          while IFS=$'\t' read -r uuid url; do
+            host=$(printf '%s' "$url" | sed -E 's#^[a-z]+://([^/]+).*#\1#')
+            case "$host" in
+              *.invalid)
+                echo "SKIP  $uuid  $url"
+                echo "      .invalid is reserved by RFC 2606 and cannot resolve. This is the example"
+                echo "      manifest, not a broken link."
+                example=$((example + 1))
+                continue
+                ;;
+            esac
+            code=$(curl -sS -L -o /dev/null -w '%{http_code}' --max-time 30 --head "$url" || echo "000")
+            if [ "$code" = "200" ]; then
+              echo "OK    $uuid  $url"
+            else
+              echo "FAIL  $uuid  $url  (HTTP $code)"
+              failed=$((failed + 1))
+            fi
+          done < urls.txt
+
+          echo
+          if [ "$failed" -ne 0 ]; then
+            echo "::error::$failed artifact URL(s) did not resolve."
+            exit 1
+          fi
+          if [ "$example" -ne 0 ]; then
+            echo "::notice::$example entr(ies) use reserved example hosts. Nothing is published yet."
+          fi
+          echo "every reachable artifact URL answered 200"

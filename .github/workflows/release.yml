@@ -1,0 +1,176 @@
+name: release
+
+# Publishes a Release from artifacts that were built and signed on a developer machine.
+#
+# == WHY THE ARTIFACTS ARE NOT BUILT HERE =========================================================
+#
+# The Android heads are classic Xamarin, which is out of support and is not present on any
+# GitHub-hosted runner image. Compilation therefore stays local. What CI can do reliably it does do:
+# it re-derives every checksum from the bytes actually attached to the Release and refuses to publish
+# if the manifest disagrees. A typed checksum fails here rather than reaching a node.
+#
+# == THE EXPECTED SEQUENCE ========================================================================
+#
+#   1. Build and sign locally.
+#   2. Create a DRAFT Release for the tag and attach the artifacts to it.
+#   3. Push the tag. This workflow verifies the draft against manifest.json and publishes it.
+#
+# The draft has to exist first because the bytes cannot come from anywhere else. A tag with no draft
+# is a mistake, not something to publish empty, so it is refused.
+#
+# == THE WRITTEN OFFER ============================================================================
+#
+# Distributing AGPL binaries obliges the distributor to offer the corresponding source for those
+# exact binaries. The offer below is generated with the commit the artifacts were built from and
+# appended to the release notes. It is a licence obligation rather than a formality, which is why it
+# is produced by the workflow instead of left to whoever is cutting the release to remember.
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+concurrency:
+  # Never cancel a publish in flight.
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    name: verify + publish
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment: client-dist-release
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Resolve and check the tag
+        id: tag
+        shell: bash
+        run: |
+          set -euo pipefail
+          TAG="${GITHUB_REF_NAME}"
+          if ! [[ "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$ ]]; then
+            echo "::error::'$TAG' is not a release tag. Expected vMAJOR.MINOR.PATCH[-prerelease]."
+            exit 1
+          fi
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+
+      - name: Validate the manifest
+        run: python3 tools/validate_manifest.py manifest.json
+
+      - name: Fetch the draft release and its assets
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.tag.outputs.tag }}
+        run: |
+          set -euo pipefail
+          if ! gh release view "$TAG" --json isDraft,assets > release.json 2>/dev/null; then
+            echo "::error::No Release exists for $TAG. Create a DRAFT release for this tag and attach"
+            echo "::error::the locally built artifacts to it before pushing the tag."
+            exit 1
+          fi
+          mkdir -p assets
+          gh release download "$TAG" --dir assets
+          echo "attached assets:"
+          ls -l assets
+
+      # THE GATE. Everything above is reversible. Publishing is not.
+      - name: Verify every manifest artifact against the attached bytes
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import hashlib, json, os, sys
+
+          manifest = json.load(open("manifest.json", encoding="utf-8"))
+          problems = []
+          checked = 0
+
+          for pkg in manifest.get("packages", []):
+              if pkg.get("obsolete"):
+                  # An obsolete entry describes a release that already happened. Its bytes are not
+                  # attached to THIS release and re-proving them here is not possible.
+                  continue
+              art = pkg.get("artifact") or {}
+              name = art.get("fileName")
+              uuid = pkg.get("uuid", "?")
+              if not name:
+                  problems.append("%s: entry has no artifact.fileName" % uuid)
+                  continue
+
+              path = os.path.join("assets", name)
+              if not os.path.exists(path):
+                  problems.append("%s: %s is named in the manifest but is not attached to the release"
+                                  % (uuid, name))
+                  continue
+
+              digest = hashlib.sha256()
+              with open(path, "rb") as fh:
+                  for chunk in iter(lambda: fh.read(1024 * 1024), b""):
+                      digest.update(chunk)
+              actual = digest.hexdigest()
+              declared = (art.get("sha256") or "").lower()
+              if actual != declared:
+                  problems.append("%s: %s sha256 is %s but the manifest declares %s"
+                                  % (uuid, name, actual, declared or "nothing"))
+
+              size = os.path.getsize(path)
+              if art.get("sizeBytes") is not None and size != art["sizeBytes"]:
+                  problems.append("%s: %s is %d bytes but the manifest declares %s"
+                                  % (uuid, name, size, art["sizeBytes"]))
+              checked += 1
+
+          if not checked:
+              problems.append("no non-obsolete manifest entry matched an attached asset, so this "
+                              "release would publish nothing that the manifest describes")
+
+          if problems:
+              print("VERIFICATION FAILED. Nothing has been published.\n")
+              for p in problems:
+                  print("  - %s" % p)
+              sys.exit(1)
+
+          print("verified %d artifact(s) against the attached bytes" % checked)
+          PY
+
+      - name: Compose the written offer of corresponding source
+        shell: bash
+        env:
+          TAG: ${{ steps.tag.outputs.tag }}
+        run: |
+          set -euo pipefail
+          {
+            echo ""
+            echo "---"
+            echo ""
+            echo "## Written offer of corresponding source"
+            echo ""
+            echo "The artifacts in this release are licensed under AGPL-3.0-only. The corresponding"
+            echo "source for these exact binaries is the Febris mobile suite at the commit below."
+            echo ""
+            echo "    release tag: ${TAG}"
+            echo "    built from:  ${GITHUB_SHA}"
+            echo "    repository:  ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}"
+            echo ""
+            echo "If the source for that commit is not reachable to you, open an issue on this"
+            echo "repository and it will be provided. This offer is valid for as long as this release"
+            echo "is distributed."
+          } > offer.md
+          cat offer.md
+
+      - name: Publish
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.tag.outputs.tag }}
+        run: |
+          set -euo pipefail
+          gh release view "$TAG" --json body --jq .body > body.md || true
+          cat body.md offer.md > notes.md
+          gh release edit "$TAG" --draft=false --notes-file notes.md
+          echo "published $TAG"
