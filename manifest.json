@@ -63,23 +63,60 @@
       "releaseNotes": "https://github.com/Febris-XR/Febris_SDK/releases/tag/v0.1.0"
     },
     {
+      "uuid": "f38da767-ff00-5f6b-83d9-2a1758191529",
+      "kind": "PC",
+      "kindId": 100,
+      "name": "Febris PC Client Suite",
+      "version": "0.2.0",
+      "channel": "stable",
+      "consumers": [
+        "node",
+        "human"
+      ],
+      "description": "Windows installer for all five desktop applications plus the bundled ffmpeg the recorder needs. Not code signed, and it needs the .NET 8 Desktop Runtime on the target.",
+      "obsolete": false,
+      "artifact": {
+        "fileName": "febris-pc-suite-v0.2.0.zip",
+        "url": "https://github.com/Febris-XR/Febris_PC/releases/download/v0.2.0/febris-pc-suite-v0.2.0.zip",
+        "sizeBytes": 41666342,
+        "sha256": "1e168d1ad08fbe6a1eb9ef3c5596235a1a3137419589ae1ac1e28dc7929a5efb"
+      },
+      "contains": [
+        {
+          "fileName": "FebrisPCSuite-0.2.0-win-x64.msi",
+          "sha256": "187427e6d17df97def5156e0950f8959b17199a5948388407a0edb9feae5f8f9"
+        }
+      ]
+    },
+    {
       "uuid": "55ee56fa-afdc-5837-91e2-972f8286e8e7",
       "kind": "AndroidMobileServer",
       "kindId": 200,
       "name": "Febris Mobile Server",
       "version": "0.2.0",
       "channel": "stable",
+      "versionCode": 200,
+      "packageName": "com.febris.mobileserver",
+      "minSdk": 29,
+      "targetSdk": 30,
       "consumers": [
+        "node",
         "human"
       ],
       "description": "The Android MDM server, sideloaded onto a phone or tablet. Debug-keystore signed, so it installs but cannot be upgraded in place by a future release-signed build.",
       "obsolete": false,
       "artifact": {
-        "fileName": "febris-mobile-server-v0.2.0.apk",
-        "url": "https://github.com/Febris-XR/Febris_MobileSuite/releases/download/v0.2.0/febris-mobile-server-v0.2.0.apk",
-        "sizeBytes": 45361057,
-        "sha256": "8d57ce7416d87072ee125d77a29aaa86217df28fcc6f4aae9dfc532a44ccf83f"
-      }
+        "fileName": "febris-mobile-server-v0.2.0.zip",
+        "url": "https://github.com/Febris-XR/Febris_MobileSuite/releases/download/v0.2.0/febris-mobile-server-v0.2.0.zip",
+        "sizeBytes": 40275233,
+        "sha256": "122bf4136ea9bcb79585fe6fed6ad35d687a79395b5934d365b0032fecbd75ad"
+      },
+      "contains": [
+        {
+          "fileName": "com.febris.mobileserver.apk",
+          "sha256": "8d57ce7416d87072ee125d77a29aaa86217df28fcc6f4aae9dfc532a44ccf83f"
+        }
+      ]
     },
     {
       "uuid": "d0a5b9cc-28ca-58b6-9c0f-70ee3bb83eac",
@@ -88,55 +125,28 @@
       "name": "Febris Mobile Companion",
       "version": "0.2.0",
       "channel": "stable",
+      "versionCode": 200,
+      "packageName": "com.febris.companion",
+      "minSdk": 25,
+      "targetSdk": 33,
       "consumers": [
+        "node",
         "human"
       ],
-      "description": "The headset app. Normally delivered to the headset by your Mobile Server rather than installed by hand; this APK is for the cases where you want to sideload it directly.",
+      "description": "The headset app. Normally delivered to a headset by your Mobile Server, which fetches it from your node, so this row is what makes ADB and OTG distribution work.",
       "obsolete": false,
       "artifact": {
-        "fileName": "febris-mobile-companion-v0.2.0.apk",
-        "url": "https://github.com/Febris-XR/Febris_MobileSuite/releases/download/v0.2.0/febris-mobile-companion-v0.2.0.apk",
-        "sizeBytes": 21960505,
-        "sha256": "27dffebdbaf2939c535b7390b5dbed29fdafb3d350e83e424f42b5ac069608b1"
-      }
-    },
-    {
-      "uuid": "e43538cd-31d3-50c2-a9bf-5a355991a213",
-      "kind": "AndroidMobileCompanion",
-      "kindId": 300,
-      "name": "Febris Mobile Companion (node package)",
-      "version": "0.2.0",
-      "channel": "stable",
-      "consumers": [
-        "node"
-      ],
-      "description": "The Companion wrapped as a zip so a node can ingest it. This is what lets a Mobile Server pull the Companion from your node and push it to a headset over ADB or OTG, instead of someone sideloading every headset by hand.",
-      "obsolete": false,
-      "artifact": {
-        "fileName": "febris-mobile-companion-v0.2.0-node.zip",
-        "url": "https://github.com/Febris-XR/Febris_MobileSuite/releases/download/v0.2.0/febris-mobile-companion-v0.2.0-node.zip",
+        "fileName": "febris-mobile-companion-v0.2.0.zip",
+        "url": "https://github.com/Febris-XR/Febris_MobileSuite/releases/download/v0.2.0/febris-mobile-companion-v0.2.0.zip",
         "sizeBytes": 19978828,
         "sha256": "a112844255e8043b1e99df001c08a2afcc67bf94dc4535fb576c6af91d15016a"
-      }
-    },
-    {
-      "uuid": "f38da767-ff00-5f6b-83d9-2a1758191529",
-      "kind": "PC",
-      "kindId": 100,
-      "name": "Febris PC Client Suite",
-      "version": "0.2.0",
-      "channel": "stable",
-      "consumers": [
-        "human"
-      ],
-      "description": "Windows installer for all five desktop applications plus the bundled ffmpeg the recorder needs. Not code signed, and requires the .NET 8 Desktop Runtime.",
-      "obsolete": false,
-      "artifact": {
-        "fileName": "FebrisPCSuite-0.2.0-win-x64.msi",
-        "url": "https://github.com/Febris-XR/Febris_PC/releases/download/v0.2.0/FebrisPCSuite-0.2.0-win-x64.msi",
-        "sizeBytes": 41746432,
-        "sha256": "187427e6d17df97def5156e0950f8959b17199a5948388407a0edb9feae5f8f9"
-      }
+      },
+      "contains": [
+        {
+          "fileName": "com.febris.companion.apk",
+          "sha256": "27dffebdbaf2939c535b7390b5dbed29fdafb3d350e83e424f42b5ac069608b1"
+        }
+      ]
     }
   ]
 }
