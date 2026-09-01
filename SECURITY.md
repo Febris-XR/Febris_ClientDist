@@ -1,11 +1,11 @@
-# Security Policy
+﻿# Security Policy
 
 ## Reporting a vulnerability
 
 Please report suspected vulnerabilities **privately**. Do not open a public issue for a
 security bug.
 
-Use this repository's **[Report a vulnerability](https://github.com/TRget88/Febris_ClientDist/security/advisories/new)**
+Use this repository's **[Report a vulnerability](https://github.com/Febris-XR/Febris_ClientDist/security/advisories/new)**
 tab (Security -> Advisories -> Report a vulnerability). That channel is private between you
 and the maintainers until a fix is published.
 

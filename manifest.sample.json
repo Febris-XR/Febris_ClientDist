@@ -1,4 +1,4 @@
-{
+﻿{
   "schemaVersion": 1,
   "generated": "2026-08-30T00:00:00Z",
   "packages": [
@@ -105,7 +105,7 @@
       "obsolete": false,
       "artifact": {
         "fileName": "febris-simulation-sdk-cpp-v0.1.0-win-x64.zip",
-        "url": "https://github.com/TRget88/Febris_SDK/releases/download/v0.1.0/febris-simulation-sdk-cpp-v0.1.0-win-x64.zip",
+        "url": "https://github.com/Febris-XR/Febris_SDK/releases/download/v0.1.0/febris-simulation-sdk-cpp-v0.1.0-win-x64.zip",
         "sizeBytes": 208268,
         "sha256": "2570817c6462ae616b16f1ad9b7b77c003fbfc0765b10da7460a9cce2237cf59"
       },
@@ -123,7 +123,7 @@
           "sha256": "27fe19b29e8c2719d53b42a8ac20ea222c0da693a2930418e4d9cef47b6f91f5"
         }
       ],
-      "releaseNotes": "https://github.com/TRget88/Febris_SDK/releases/tag/v0.1.0"
+      "releaseNotes": "https://github.com/Febris-XR/Febris_SDK/releases/tag/v0.1.0"
     }
   ]
 }
