@@ -119,6 +119,7 @@
         {
           "fileName": "com.febris.mobileserver.apk",
           "sha256": "8d57ce7416d87072ee125d77a29aaa86217df28fcc6f4aae9dfc532a44ccf83f",
+          "signerSha256": "05c4f79662c64e2f0a07e8d6db51236e9b6772c480ed8edfd44d57a1c3889259",
           "sizeBytes": 45361057
         }
       ]
@@ -150,6 +151,7 @@
         {
           "fileName": "com.febris.companion.apk",
           "sha256": "27dffebdbaf2939c535b7390b5dbed29fdafb3d350e83e424f42b5ac069608b1",
+          "signerSha256": "05c4f79662c64e2f0a07e8d6db51236e9b6772c480ed8edfd44d57a1c3889259",
           "sizeBytes": 21960505
         }
       ]
