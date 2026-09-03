@@ -138,8 +138,17 @@
             "additionalProperties": false,
             "required": ["fileName", "sha256"],
             "properties": {
-              "fileName": { "type": "string", "minLength": 1 },
+              "fileName": {
+                "description": "PATH of the file WITHIN the archive, exactly as the archive stores it, and not merely its base name. An archive that nests its payload under a directory must include that directory here, or a consumer looking the entry up will not find it. Recording base names for a nested archive is what shipped a C++ SDK row naming three files that could not be located inside its own zip.",
+                "type": "string",
+                "minLength": 1
+              },
               "sha256": { "$ref": "#/$defs/sha256" },
+              "sizeBytes": {
+                "description": "Size of this inner file in bytes. Optional. The landing page shows File, Size and SHA-256 beside the DOWNLOAD button, and for the client kinds that button serves this file rather than the zip in `artifact`, so without a size here the page can only show two of the three.",
+                "type": "integer",
+                "minimum": 1
+              },
               "signerSha256": {
                 "description": "SHA-256 of the APK SIGNING CERTIFICATE, not of the file. This is the only field here that proves ORIGIN rather than integrity: a public URL plus a public checksum authenticates that bytes arrived intact and says nothing about who produced them. A node that pins this value can refuse an artifact signed by anyone else. Obtain it with `apksigner verify --print-certs`.",
                 "$ref": "#/$defs/sha256"

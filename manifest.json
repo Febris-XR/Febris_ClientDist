@@ -48,16 +48,19 @@
       },
       "contains": [
         {
-          "fileName": "Febris.CppSimulationLibrary.dll",
-          "sha256": "dd6143d75a2016817ac738fd8a60795b48402746b7e469eabde21b0a3cdd3d6b"
+          "fileName": "febris-simulation-sdk-cpp-v0.1.0-win-x64/Febris.CppSimulationLibrary.dll",
+          "sha256": "dd6143d75a2016817ac738fd8a60795b48402746b7e469eabde21b0a3cdd3d6b",
+          "sizeBytes": 472064
         },
         {
-          "fileName": "Febris.CppSimulationLibrary.lib",
-          "sha256": "4970fc1347ab523b385b8e124f989a24b6009bb6e91ef8ff239049525abca55c"
+          "fileName": "febris-simulation-sdk-cpp-v0.1.0-win-x64/Febris.CppSimulationLibrary.lib",
+          "sha256": "4970fc1347ab523b385b8e124f989a24b6009bb6e91ef8ff239049525abca55c",
+          "sizeBytes": 10082
         },
         {
-          "fileName": "FebrisSimApi.h",
-          "sha256": "27fe19b29e8c2719d53b42a8ac20ea222c0da693a2930418e4d9cef47b6f91f5"
+          "fileName": "febris-simulation-sdk-cpp-v0.1.0-win-x64/FebrisSimApi.h",
+          "sha256": "27fe19b29e8c2719d53b42a8ac20ea222c0da693a2930418e4d9cef47b6f91f5",
+          "sizeBytes": 15087
         }
       ],
       "releaseNotes": "https://github.com/Febris-XR/Febris_SDK/releases/tag/v0.1.0"
@@ -84,7 +87,8 @@
       "contains": [
         {
           "fileName": "FebrisPCSuite-0.2.0-win-x64.msi",
-          "sha256": "187427e6d17df97def5156e0950f8959b17199a5948388407a0edb9feae5f8f9"
+          "sha256": "187427e6d17df97def5156e0950f8959b17199a5948388407a0edb9feae5f8f9",
+          "sizeBytes": 41746432
         }
       ]
     },
@@ -114,7 +118,8 @@
       "contains": [
         {
           "fileName": "com.febris.mobileserver.apk",
-          "sha256": "8d57ce7416d87072ee125d77a29aaa86217df28fcc6f4aae9dfc532a44ccf83f"
+          "sha256": "8d57ce7416d87072ee125d77a29aaa86217df28fcc6f4aae9dfc532a44ccf83f",
+          "sizeBytes": 45361057
         }
       ]
     },
@@ -144,7 +149,8 @@
       "contains": [
         {
           "fileName": "com.febris.companion.apk",
-          "sha256": "27dffebdbaf2939c535b7390b5dbed29fdafb3d350e83e424f42b5ac069608b1"
+          "sha256": "27dffebdbaf2939c535b7390b5dbed29fdafb3d350e83e424f42b5ac069608b1",
+          "sizeBytes": 21960505
         }
       ]
     }

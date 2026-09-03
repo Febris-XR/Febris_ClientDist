@@ -69,7 +69,7 @@ ARTIFACT_REQUIRED = ("fileName", "url", "sizeBytes", "sha256")
 ARTIFACT_ALLOWED = set(ARTIFACT_REQUIRED)
 
 CONTAINS_REQUIRED = ("fileName", "sha256")
-CONTAINS_ALLOWED = set(CONTAINS_REQUIRED) | {"signerSha256"}
+CONTAINS_ALLOWED = set(CONTAINS_REQUIRED) | {"signerSha256", "sizeBytes"}
 
 
 def check_keys(errors, where, obj, required, allowed):
@@ -135,6 +135,11 @@ def validate_contains(errors, where, entries):
                         "%s.%s: expected 64 lowercase hex characters, got %r"
                         % (entry_where, field, value)
                     )
+        # Optional. The landing page shows File, Size and SHA-256 beside the DOWNLOAD button, and
+        # for the client kinds that button serves the installer or APK described here rather than
+        # the zip in `artifact`. Without a size here the page can only show two of the three.
+        if "sizeBytes" in entry:
+            check_positive_int(errors, entry_where + ".sizeBytes", entry["sizeBytes"])
 
 
 def validate_package(errors, index, pkg):
