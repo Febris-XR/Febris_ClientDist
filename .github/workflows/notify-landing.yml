@@ -1,0 +1,53 @@
+# Tell the landing site that the feed moved.
+#
+# publish-site.yml in Febris_Landing listens for a repository_dispatch of type feed-updated and
+# rebuilds straight away. Its header called that the fast path, but nothing ever sent the event, so
+# in practice a release waited for that repo's daily cron and the public download page could
+# advertise the previous version for most of a day. This is the missing sender.
+#
+# WHY A SECRET IS NEEDED. A workflow's built-in GITHUB_TOKEN is scoped to the repository it runs in,
+# so it cannot dispatch to another one. This needs a token carrying write access to contents on
+# Febris_Landing, stored here as LANDING_DISPATCH_TOKEN. A fine-grained PAT scoped to that single
+# repository is enough, and it should not be given anything broader.
+#
+# WHY A MISSING SECRET IS NOT AN ERROR. Without the token the job reports what happened and exits 0.
+# The absent fast path costs a delay, not a broken release, since the cron still covers it. Failing
+# the run instead would put a permanent red mark on a repository whose release actually succeeded,
+# and a check that is red for something harmless is one people stop reading.
+name: notify-landing
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'manifest.json'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: notify-landing
+  cancel-in-progress: true
+
+jobs:
+  notify:
+    name: nudge the landing site
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Dispatch feed-updated to Febris_Landing
+        env:
+          GH_TOKEN: ${{ secrets.LANDING_DISPATCH_TOKEN }}
+        run: |
+          set -euo pipefail
+          if [ -z "${GH_TOKEN:-}" ]; then
+            echo "::notice::LANDING_DISPATCH_TOKEN is not set, so the site was not nudged. It will"
+            echo "::notice::pick this feed up on its daily schedule instead. To enable the fast"
+            echo "::notice::path, add a fine-grained PAT with write access to contents on"
+            echo "::notice::Febris-XR/Febris_Landing as the LANDING_DISPATCH_TOKEN secret here."
+            exit 0
+          fi
+          gh api --method POST /repos/Febris-XR/Febris_Landing/dispatches \
+            -f event_type=feed-updated
+          echo "dispatched feed-updated to Febris_Landing"

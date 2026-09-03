@@ -1,29 +1,50 @@
 name: release
 
-# Publishes a Release from artifacts that were built and signed on a developer machine.
+# Publishes a Release for the feed, after proving the feed describes the bytes it points at.
 #
 # == WHY THE ARTIFACTS ARE NOT BUILT HERE =========================================================
 #
 # The Android heads are classic Xamarin, which is out of support and is not present on any
-# GitHub-hosted runner image. Compilation therefore stays local. What CI can do reliably it does do:
-# it re-derives every checksum from the bytes actually attached to the Release and refuses to publish
-# if the manifest disagrees. A typed checksum fails here rather than reaching a node.
+# GitHub-hosted runner image. Compilation therefore stays local. What CI can do reliably it does do.
+# It re-derives every checksum from the real bytes and refuses to publish if the manifest disagrees,
+# so a typed checksum fails here rather than reaching a node.
+#
+# == WHERE THE BYTES COME FROM, AND WHY THIS CHANGED ==============================================
+#
+# This repository is an INDEX. It holds no artifacts. Every row points at a release in another
+# repository or at nuget.org, which is what artifact.url records.
+#
+# This job used to download the assets attached to THIS repository's release and require every
+# manifest fileName to be among them. That could never pass. All five artifacts live elsewhere, so
+# the only way to satisfy it was to re-upload roughly 150 MB of duplicates here and create a second
+# copy of every artifact that could then disagree with the first. The repository has no tags, so the
+# workflow had never run and the contradiction went unnoticed.
+#
+# It now fetches each artifact from its own artifact.url and verifies it there. That is a stronger
+# check than the original, because it proves the URL a node will actually resolve serves the bytes
+# the manifest promises, rather than proving something about a private copy.
+#
+# It also verifies the contains[] entries by opening each archive and hashing the named file inside.
+# Those digests are not decoration. The landing page shows contains[0] beside the download button,
+# so a wrong value there is a checksum a visitor is invited to fail.
 #
 # == THE EXPECTED SEQUENCE ========================================================================
 #
-#   1. Build and sign locally.
-#   2. Create a DRAFT Release for the tag and attach the artifacts to it.
-#   3. Push the tag. This workflow verifies the draft against manifest.json and publishes it.
+#   1. Build locally, publish the artifacts to their own repositories' releases.
+#   2. Update manifest.json with the new URLs, sizes and digests, and land it on main.
+#   3. Create a DRAFT Release here for the tag, carrying the notes.
+#   4. Push the tag. This workflow verifies the feed against the published bytes and publishes.
 #
-# The draft has to exist first because the bytes cannot come from anywhere else. A tag with no draft
-# is a mistake, not something to publish empty, so it is refused.
+# The draft still has to exist first, because it is where the human-written notes live. A tag with
+# no draft is a mistake rather than something to publish empty, so it is refused.
 #
 # == THE WRITTEN OFFER ============================================================================
 #
 # Distributing AGPL binaries obliges the distributor to offer the corresponding source for those
-# exact binaries. The offer below is generated with the commit the artifacts were built from and
-# appended to the release notes. It is a licence obligation rather than a formality, which is why it
-# is produced by the workflow instead of left to whoever is cutting the release to remember.
+# exact binaries. That source is NOT this repository. This repository is a JSON index, and its
+# commit says nothing about how any binary was built. The offer therefore names the source
+# repository for each kind. Getting this wrong is a licence defect, not a cosmetic one, which is why
+# it is produced by the workflow instead of left to whoever is cutting the release to remember.
 
 on:
   push:
@@ -63,80 +84,26 @@ jobs:
       - name: Validate the manifest
         run: python3 tools/validate_manifest.py manifest.json
 
-      - name: Fetch the draft release and its assets
+      - name: Require a draft release to publish into
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
           TAG: ${{ steps.tag.outputs.tag }}
         run: |
           set -euo pipefail
-          if ! gh release view "$TAG" --json isDraft,assets > release.json 2>/dev/null; then
-            echo "::error::No Release exists for $TAG. Create a DRAFT release for this tag and attach"
-            echo "::error::the locally built artifacts to it before pushing the tag."
+          if ! gh release view "$TAG" --json isDraft > release.json 2>/dev/null; then
+            echo "::error::No Release exists for $TAG. Create a DRAFT release for this tag, carrying"
+            echo "::error::the release notes, before pushing the tag."
             exit 1
           fi
-          mkdir -p assets
-          gh release download "$TAG" --dir assets
-          echo "attached assets:"
-          ls -l assets
+          # No assets are expected here. The artifacts live in the repositories that built them and
+          # are verified at their published URLs by the next step.
+          echo "draft present for $TAG"
 
       # THE GATE. Everything above is reversible. Publishing is not.
-      - name: Verify every manifest artifact against the attached bytes
+      - name: Verify every manifest artifact at its published URL
         shell: bash
-        run: |
-          python3 - <<'PY'
-          import hashlib, json, os, sys
-
-          manifest = json.load(open("manifest.json", encoding="utf-8"))
-          problems = []
-          checked = 0
-
-          for pkg in manifest.get("packages", []):
-              if pkg.get("obsolete"):
-                  # An obsolete entry describes a release that already happened. Its bytes are not
-                  # attached to THIS release and re-proving them here is not possible.
-                  continue
-              art = pkg.get("artifact") or {}
-              name = art.get("fileName")
-              uuid = pkg.get("uuid", "?")
-              if not name:
-                  problems.append("%s: entry has no artifact.fileName" % uuid)
-                  continue
-
-              path = os.path.join("assets", name)
-              if not os.path.exists(path):
-                  problems.append("%s: %s is named in the manifest but is not attached to the release"
-                                  % (uuid, name))
-                  continue
-
-              digest = hashlib.sha256()
-              with open(path, "rb") as fh:
-                  for chunk in iter(lambda: fh.read(1024 * 1024), b""):
-                      digest.update(chunk)
-              actual = digest.hexdigest()
-              declared = (art.get("sha256") or "").lower()
-              if actual != declared:
-                  problems.append("%s: %s sha256 is %s but the manifest declares %s"
-                                  % (uuid, name, actual, declared or "nothing"))
-
-              size = os.path.getsize(path)
-              if art.get("sizeBytes") is not None and size != art["sizeBytes"]:
-                  problems.append("%s: %s is %d bytes but the manifest declares %s"
-                                  % (uuid, name, size, art["sizeBytes"]))
-              checked += 1
-
-          if not checked:
-              problems.append("no non-obsolete manifest entry matched an attached asset, so this "
-                              "release would publish nothing that the manifest describes")
-
-          if problems:
-              print("VERIFICATION FAILED. Nothing has been published.\n")
-              for p in problems:
-                  print("  - %s" % p)
-              sys.exit(1)
-
-          print("verified %d artifact(s) against the attached bytes" % checked)
-          PY
+        run: python3 tools/verify_published.py manifest.json
 
       - name: Compose the written offer of corresponding source
         shell: bash
@@ -144,23 +111,52 @@ jobs:
           TAG: ${{ steps.tag.outputs.tag }}
         run: |
           set -euo pipefail
-          {
-            echo ""
-            echo "---"
-            echo ""
-            echo "## Written offer of corresponding source"
-            echo ""
-            echo "The artifacts in this release are licensed under AGPL-3.0-only. The corresponding"
-            echo "source for these exact binaries is the Febris mobile suite at the commit below."
-            echo ""
-            echo "    release tag: ${TAG}"
-            echo "    built from:  ${GITHUB_SHA}"
-            echo "    repository:  ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}"
-            echo ""
-            echo "If the source for that commit is not reachable to you, open an issue on this"
-            echo "repository and it will be provided. This offer is valid for as long as this release"
-            echo "is distributed."
-          } > offer.md
+          # Derived from the manifest rather than hardcoded, so the offer names what this release
+          # actually carries. The corresponding source is NOT this repository. This repository is a
+          # JSON index and its commit says nothing about how any binary was built, so naming it
+          # would make the offer point at source that does not correspond to the artifacts.
+          python3 - "$TAG" > offer.md <<'PY'
+          import json, sys, urllib.parse
+
+          # Which repository holds the source for each kind. Kept here rather than in the feed
+          # because it describes provenance, which is not something a consuming node needs.
+          SOURCE = {
+              100: "Febris-XR/Febris_PC",
+              200: "Febris-XR/Febris_MobileSuite",
+              300: "Febris-XR/Febris_MobileSuite",
+              400: "Febris-XR/Febris_SDK",
+              500: "Febris-XR/Febris_SDK",
+          }
+
+          tag = sys.argv[1]
+          manifest = json.load(open("manifest.json", encoding="utf-8"))
+
+          print("")
+          print("---")
+          print("")
+          print("## Written offer of corresponding source")
+          print("")
+          print("Every artifact this feed points at is licensed under AGPL-3.0-only. The")
+          print("corresponding source for each one is the repository that built and published it,")
+          print("at the tag named beside it below. This index repository is not that source.")
+          print("")
+          for pkg in manifest.get("packages", []):
+              if pkg.get("obsolete"):
+                  continue
+              repo = SOURCE.get(pkg.get("kindId"), "unknown")
+              url = (pkg.get("artifact") or {}).get("url", "")
+              # A GitHub release URL carries its tag. Anything else, such as nuget.org, does not,
+              # so fall back to the row's own version, which is what was published.
+              parts = urllib.parse.urlparse(url).path.split("/")
+              src_tag = parts[parts.index("download") + 1] if "download" in parts else "v" + pkg.get("version", "?")
+              print("    %-28s %s @ %s" % (pkg.get("name", "?"), repo, src_tag))
+          print("")
+          print("    feed release: %s" % tag)
+          print("")
+          print("If the source for any of those tags is not reachable to you, open an issue on this")
+          print("repository and it will be provided. This offer is valid for as long as this release")
+          print("is distributed.")
+          PY
           cat offer.md
 
       - name: Publish
