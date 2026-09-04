@@ -70,8 +70,10 @@ attesting that the artifact they attached is the one they built.
 1. Build and sign the artifacts locally.
 2. Open a pull request updating `manifest.json`. `validate.yml` checks the schema and the
    cross-field rules, and confirms every artifact URL resolves.
-3. Merge, then tag `vX.Y.Z`. `release.yml` validates, recomputes checksums against the attached
-   artifacts, and cuts the Release.
+3. Create a DRAFT Release for `vX.Y.Z` here carrying the notes, merge, then push the tag.
+   `release.yml` refuses a missing draft, an empty draft, or a release that is already public,
+   then fetches every artifact from the URL the feed points at, verifies the digests and the
+   files inside each archive, appends the written offer, and publishes the draft exactly once.
 
 The release notes carry the written offer of corresponding source, naming the exact commit the
 artifacts were built from. That offer is a licence obligation, not a formality, and the workflow

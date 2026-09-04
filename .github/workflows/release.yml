@@ -36,7 +36,8 @@ name: release
 #   4. Push the tag. This workflow verifies the feed against the published bytes and publishes.
 #
 # The draft still has to exist first, because it is where the human-written notes live. A tag with
-# no draft is a mistake rather than something to publish empty, so it is refused.
+# no draft, a draft with no notes, or a release that is already public is a mistake rather than
+# something to publish, so each is refused before the gate runs and before anything changes.
 #
 # == THE WRITTEN OFFER ============================================================================
 #
@@ -84,21 +85,40 @@ jobs:
       - name: Validate the manifest
         run: python3 tools/validate_manifest.py manifest.json
 
-      - name: Require a draft release to publish into
+      # Three things are required of the release here, and each is checked rather than assumed.
+      # It exists. It is still a DRAFT. It carries non-empty notes. This step used to fetch isDraft
+      # and never read it, so an already-public release satisfied "require a draft" and the Publish
+      # step re-published it with the written offer appended a second time. The body is fetched
+      # once, here, before the gate, so an empty one fails while everything is still reversible
+      # instead of flowing silently into the published notes.
+      - name: Require a draft release carrying notes
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
           TAG: ${{ steps.tag.outputs.tag }}
         run: |
           set -euo pipefail
-          if ! gh release view "$TAG" --json isDraft > release.json 2>/dev/null; then
+          if ! gh release view "$TAG" --json isDraft --jq .isDraft > is_draft.txt 2>/dev/null; then
             echo "::error::No Release exists for $TAG. Create a DRAFT release for this tag, carrying"
             echo "::error::the release notes, before pushing the tag."
             exit 1
           fi
+          if [ "$(cat is_draft.txt)" != "true" ]; then
+            echo "::error::The Release for $TAG is already published. This workflow publishes a draft"
+            echo "::error::exactly once. Re-running it against a public release would append the"
+            echo "::error::written offer a second time. Nothing was changed."
+            exit 1
+          fi
+          gh release view "$TAG" --json body --jq .body > body.md
+          if ! grep -q '[^[:space:]]' body.md; then
+            echo "::error::The draft Release for $TAG has no notes. The notes are the one part of a"
+            echo "::error::release a person writes, and publishing without them is a mistake rather"
+            echo "::error::than something to publish empty. Add them to the draft and push the tag again."
+            exit 1
+          fi
           # No assets are expected here. The artifacts live in the repositories that built them and
           # are verified at their published URLs by the next step.
-          echo "draft present for $TAG"
+          echo "draft present for $TAG with $(wc -c < body.md) bytes of notes"
 
       # THE GATE. Everything above is reversible. Publishing is not.
       - name: Verify every manifest artifact at its published URL
@@ -166,7 +186,15 @@ jobs:
           TAG: ${{ steps.tag.outputs.tag }}
         run: |
           set -euo pipefail
-          gh release view "$TAG" --json body --jq .body > body.md || true
+          # body.md was fetched and checked non-empty before the gate. offer.md was composed from
+          # the manifest. Neither is re-fetched here and nothing is allowed to be empty, because the
+          # notes about to become public are the one output of this workflow a person reads.
+          for f in body.md offer.md; do
+            if ! grep -q '[^[:space:]]' "$f"; then
+              echo "::error::$f is empty at publish time. Refusing to publish $TAG with incomplete notes."
+              exit 1
+            fi
+          done
           cat body.md offer.md > notes.md
           gh release edit "$TAG" --draft=false --notes-file notes.md
           echo "published $TAG"
