@@ -9,20 +9,33 @@ whole mechanism.
 
 ---
 
-## What is published here today: the two SDKs, nothing else
+## What is published here today
 
 Read this before you look for a client download.
 
-`manifest.json` currently advertises exactly two packages, and both are real: the **C# Simulation
-SDK** (pointing at the published nuget.org package) and the **C++ Simulation SDK** (pointing at
-the conformance-gated bundle on the Febris_SDK GitHub Release). Their URLs resolve, their sizes
-and sha256 digests are of the live artifacts, and a node syncing this feed catalogs them for
-developers. The SDKs are hosted on their canonical channels; this feed only points.
+`manifest.json` advertises **five** packages, and every one of them is real.
 
-**No CLIENT artifact exists yet.** The Android signing keystore has not been generated, and until
-it is, no APK can be published that a device will accept as an upgrade to any later build. The PC
-launcher rides the same gate. So the mobile and PC kinds are absent from the live feed, and that
-absence is the truthful state rather than an oversight.
+| Kind | Version | Where the bytes live |
+|---|---|---|
+| `CSharp` | 0.1.0 | the published nuget.org package |
+| `CPP` | 0.1.0 | the conformance-gated bundle on the Febris_SDK release |
+| `PC` | 0.2.0 | the Febris_PC v0.2.0 release |
+| `AndroidMobileServer` | 0.2.0 | the Febris_MobileSuite v0.2.0 release |
+| `AndroidMobileCompanion` | 0.2.0 | the Febris_MobileSuite v0.2.0 release |
+
+Their URLs resolve, their sizes and sha256 digests are of the live artifacts, and a node syncing
+this feed catalogues them. Nothing is hosted here. Every artifact sits on its own project's
+release page and this feed only points at it.
+
+> **CORRECTED 2026-09-08.** This section used to be headed "the two SDKs, nothing else" and said
+> **No CLIENT artifact exists yet**, on the grounds that the Android signing keystore had not been
+> generated. Both statements were overtaken on 2026-09-01, when the PC suite and the Android suite
+> published at v0.2.0 and their rows entered this feed. The keystore exists.
+>
+> One thing the old text got right is worth keeping. The published Android v0.2.0 builds are
+> **debug-signed**, so a device that installs one cannot take a release-signed v0.2.1 as an
+> upgrade. Android refuses across a signing-certificate change and the device has to uninstall
+> first. That happens once, at v0.2.1, and never again.
 
 `manifest.sample.json` sits beside it as the worked example covering every kind. Its two Android
 rows are deliberately non-functional (URLs on the `.invalid` TLD that RFC 2606 reserves so they
@@ -44,7 +57,7 @@ git would keep every version forever.
 
 | Path | What it is |
 |---|---|
-| `manifest.json` | the live index, always current on the default branch. Empty today |
+| `manifest.json` | the live index, always current on the default branch. Five packages today |
 | `manifest.sample.json` | a worked example, deliberately non-functional |
 | `schema/manifest.schema.json` | the feed contract, JSON Schema 2020-12, versioned |
 | `tools/validate_manifest.py` | the pull-request gate, standard library only |
@@ -85,9 +98,15 @@ used to decide which package is newest, because regenerating a manifest is not a
 - `AndroidMobileServer` is `["human", "node"]`. It is the **bootstrap**, so a person must be able
   to click a link and sideload it. A tablet with no Febris app on it cannot fetch its own first
   app.
-- `AndroidMobileCompanion` is `["node"]`. The portal deliberately refuses to serve it to a browser
-  and returns an explanatory page instead of bytes. It reaches the headset by the node serving it
-  to the mobile Server, which installs it over ADB on USB OTG.
+- `AndroidMobileCompanion` is `["node", "human"]`. It normally reaches a headset by the node
+  serving it to the mobile Server, which installs it over ADB on USB OTG, and that is the route
+  to plan around.
+
+  > **CORRECTED 2026-09-08.** This entry used to read `["node"]` and to say the portal refuses to
+  > serve the Companion to a browser, returning an explanatory page instead of bytes. Neither is
+  > true. The live row carries `["node", "human"]`, and no code anywhere implements that refusal.
+  > The only reader of `consumers` is the node-side feed sync, which uses it to skip a row it is
+  > not offered. The portal does the opposite and maps the Companion to a public download anchor.
 
 A consumer that ignores the field still works, so this is documentation with teeth rather than a
 gate.
