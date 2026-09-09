@@ -3,10 +3,18 @@
 Two audiences read this. A node operator pointing a node at this feed, and a person putting the
 first application onto a bare tablet by hand.
 
-**Nothing is published yet.** No signing keystore exists, so no artifact here is real. The
-manifest committed to this repository is a worked example whose URLs use the reserved `.invalid`
-TLD and whose checksums are counting patterns. The steps below are correct and are not yet
-runnable.
+Five packages are published and every URL in `manifest.json` resolves. The two simulation SDKs at
+0.1.0, and the PC suite, Mobile Server and Mobile Companion at 0.2.0.
+
+> **CORRECTED 2026-09-08.** This paragraph used to open **Nothing is published yet**, on the
+> grounds that no signing keystore existed and the committed manifest was a worked example with
+> `.invalid` URLs. That stopped being true on 2026-09-01. The keystore exists, the clients
+> published at v0.2.0, and `manifest.json` on this branch is the live index. The worked example
+> with the reserved-TLD URLs is `manifest.sample.json`, a different file.
+>
+> One caveat survives. The published Android v0.2.0 builds are **debug-signed**. A device that
+> takes one cannot be upgraded in place to a release-signed v0.2.1, because Android refuses
+> across a signing-certificate change, so it has to uninstall first. Once, at v0.2.1.
 
 ---
 
@@ -46,7 +54,7 @@ published for people as well as for nodes.
 2. Verify it before you install it:
 
    ```bash
-   sha256sum febris-mobile-server-0.2.0.zip
+   sha256sum febris-mobile-server-v0.2.0.zip
    ```
 
 Compare against the `artifact.sha256` for that entry in `manifest.json`. If they differ, stop.
@@ -57,18 +65,25 @@ Compare against the `artifact.sha256` for that entry in `manifest.json`. If they
 To check who signed the APK rather than only that it arrived intact:
 
 ```bash
-apksigner verify --print-certs febris-mobile-server-0.2.0.apk
+unzip -o febris-mobile-server-v0.2.0.zip
+apksigner verify --print-certs com.febris.mobileserver.apk
 ```
 
 Compare the certificate digest against `contains[].signerSha256` in the manifest entry. The
 checksum proves the bytes are undamaged. The signer digest is the only field that says anything
 about who produced them.
 
-## The Companion is not downloadable by a person
+## How the Companion normally reaches a headset
 
-`AndroidMobileCompanion` is listed with `consumers: ["node"]` and the portal refuses to serve it
-to a browser, returning an explanation instead of bytes. It reaches a headset by the node serving
-it to the Mobile Server, which installs it over ADB on USB OTG.
+Not by a person downloading it. It reaches a headset by the node serving it to the Mobile Server,
+which installs it over ADB on USB OTG. Plan around that route.
+
+> **CORRECTED 2026-09-08.** This section used to say the Companion is listed with
+> `consumers: ["node"]` and that the portal refuses to serve it to a browser, returning an
+> explanation instead of bytes. Neither holds. The live row carries `["node", "human"]`, the APK
+> is a normal asset on the Febris_MobileSuite v0.2.0 release, and no code anywhere implements
+> that refusal. The only reader of `consumers` is the node-side feed sync, which uses it to skip
+> a row it is not offered.
 
 That is a deliberate path, not a restriction to work around. The Companion expects to be
 provisioned by a Server that already knows which node it belongs to.
